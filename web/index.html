@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="orchestrator-token" content="__API_TOKEN__">
+  <title>Local Orchestrator</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='12' fill='%237c66dc'/%3E%3Cpath d='M12 12h6v16h-6zm10 0h6v16h-6z' fill='white'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="/" aria-label="Local Orchestrator — strona główna"><span class="brand-mark">lo</span><span>local<span class="brand-sub">orchestrator</span></span></a>
+    <div class="workspace-label">TWOJA PRZESTRZEŃ</div>
+    <nav aria-label="Główna nawigacja">
+      <button class="nav-button active" data-page="tasks"><span aria-hidden="true">▤</span> Zadania <span id="queue-count" class="nav-count">0</span></button>
+      <button class="nav-button" data-page="projects"><span aria-hidden="true">▱</span> Projekty</button>
+      <button class="nav-button" data-page="system"><span aria-hidden="true">◉</span> Połączenia</button>
+    </nav>
+    <div class="sidebar-note"><span class="local-dot"></span> Przestrzeń Comfortel<p>Projekty, zadania i agenci.<br>Jedno miejsce dla zespołu.</p></div>
+    <div class="sidebar-footer"><span class="avatar">TY</span><div><span id="username">Przestrzeń robocza</span><small>Wersja 0.1</small></div><button id="logout" class="logout-button" aria-label="Wyloguj się" title="Wyloguj się">↪</button></div>
+  </aside>
+
+  <main>
+    <header class="topbar"><span>Przestrzeń robocza <span class="slash">/</span> <strong id="breadcrumb">Zadania</strong></span><span id="connection" class="connection"><i></i> Łączenie…</span></header>
+    <div id="banner" class="banner" role="alert" hidden></div>
+
+    <section id="page-tasks" class="page">
+      <div class="page-heading"><div><p class="eyebrow">OD POMYSŁU DO ZMIANY W KODZIE</p><h1>Twoje centrum pracy.</h1><p class="subtitle">Zleć zadanie agentowi. Obserwuj postępy. Przejrzyj wynik.</p></div><button class="primary" id="new-task">＋ Nowe zadanie</button></div>
+      <div class="metrics">
+        <div class="metric"><span class="metric-icon violet">▱</span><div><span class="metric-label">Projekty</span><strong id="metric-projects">0</strong></div><small>połączone repozytoria</small></div>
+        <div class="metric"><span class="metric-icon amber">◷</span><div><span class="metric-label">W toku i w kolejce</span><strong id="metric-active">0</strong></div><small>jedno zadanie naraz</small></div>
+        <div class="metric"><span class="metric-icon green">✓</span><div><span class="metric-label">Ukończone</span><strong id="metric-done">0</strong></div><small>w ostatnich 200 zadaniach</small></div>
+      </div>
+      <div class="work-grid">
+        <section class="task-panel panel" aria-label="Lista zadań">
+          <div class="panel-heading"><h2>Zadania</h2><span class="muted" id="task-count">0 zadań</span></div>
+          <div class="filters"><input id="search" type="search" placeholder="Szukaj zadania…" aria-label="Szukaj zadania"><select id="project-filter" aria-label="Filtruj po projekcie"><option value="">Wszystkie projekty</option></select></div>
+          <div id="task-list"></div>
+          <div id="empty-list" class="empty-state"><div class="empty-symbol">✦</div><h3>Miejsce na Twój następny pomysł</h3><p>Dodaj projekt i zleć pierwsze zadanie.<br>Jego przebieg pojawi się tutaj.</p><button id="empty-add-project" class="secondary">＋ Dodaj projekt</button></div>
+        </section>
+        <section class="detail-panel panel" aria-label="Szczegóły zadania">
+          <div id="empty-detail" class="empty-state large"><div class="flow-dots"><span>▱</span><i></i><span>✦</span><i></i><span>✓</span></div><h3>Od zlecenia do gotowego wyniku</h3><p>Wybierz zadanie, aby zobaczyć odpowiedź<br>agenta, logi i zmiany w plikach.</p><div class="detail-hint">Każde zadanie pracuje na osobnej kopii repozytorium.</div></div>
+          <div id="job-detail" hidden>
+            <div class="detail-heading"><div><div class="detail-kicker" id="detail-project"></div><h2 id="detail-title"></h2></div><span id="detail-status" class="badge"></span></div>
+            <div class="job-meta" id="job-meta"></div>
+            <div class="job-actions"><button class="secondary small" id="retry-job" hidden>↻ Uruchom ponownie</button><button class="danger small" id="cancel-job" hidden>Anuluj zadanie</button><button class="secondary small" id="download-patch" hidden>↓ Pobierz patch</button></div>
+            <div id="job-error" class="job-error" hidden></div>
+            <div class="tabs" role="tablist" aria-label="Widok zadania"><button id="tab-result" role="tab" aria-selected="true" aria-controls="view-result" data-tab="result" class="active">Wynik</button><button id="tab-logs" role="tab" aria-selected="false" aria-controls="view-logs" data-tab="logs">Przebieg</button><button id="tab-diff" role="tab" aria-selected="false" aria-controls="view-diff" data-tab="diff">Zmiany</button></div>
+            <div id="view-result" class="tab-content" role="tabpanel" aria-labelledby="tab-result"><div class="prompt-box"><span>TREŚĆ ZADANIA</span><p id="detail-prompt"></p></div><pre id="result-text" class="result-text"></pre><div id="workspace-box" class="workspace-box" hidden><span>KOPIA ROBOCZA</span><code id="workspace-path"></code><small id="base-commit"></small></div></div>
+            <div id="view-logs" class="tab-content" role="tabpanel" aria-labelledby="tab-logs" hidden><div class="log-caption"><span>Przebieg wykonania</span><label><input type="checkbox" id="autoscroll" checked> Przewijaj automatycznie</label></div><div id="event-log" class="event-log" aria-label="Logi agenta"></div></div>
+            <div id="view-diff" class="tab-content" role="tabpanel" aria-labelledby="tab-diff" hidden><p id="diff-note" class="muted"></p><pre id="diff-text" class="diff-text"></pre></div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section id="page-projects" class="page" hidden>
+      <div class="page-heading"><div><p class="eyebrow">BAZA TWOJEJ PRACY</p><h1>Projekty.</h1><p class="subtitle">Repozytoria Comfortel i wspólny kontekst dla agentów.</p></div><button class="primary" id="add-project">＋ Dodaj projekt</button></div>
+      <div id="project-cards" class="project-cards"></div>
+      <div id="empty-projects" class="panel empty-state"><h3>Połącz pierwsze repozytorium</h3><p>Administrator może dodać adres firmowego Git.<br>Zmiany agentów powstaną w osobnych kopiach.</p></div>
+    </section>
+
+    <section id="page-system" class="page" hidden>
+      <div class="page-heading"><div><p class="eyebrow">GOTOWOŚĆ DO PRACY</p><h1>Połączenia.</h1><p class="subtitle">Narzędzia agentów i integracje działające na serwerze.</p></div><button id="refresh-health" class="secondary">↻ Sprawdź ponownie</button></div>
+      <div id="provider-cards" class="project-cards"></div>
+      <div class="panel setup-notes"><h2>Narzędzia na serwerze</h2><p>Administrator konfiguruje CLI agentów, dostęp SSH do Git oraz konto integracji z Jira na maszynie wirtualnej. Dostępność CLI nie oznacza aktywnego logowania.</p><p>Zadania korzystają z kont i limitów skonfigurowanych na serwerze. Tryb „Zmiany w kodzie” pozwala agentowi edytować kopię projektu i wykonywać polecenia na VM. Kopia Git oddziela pliki projektu, ale nie jest sandboxem systemowym.</p><p>Historia i kopie robocze: <code id="data-path"></code></p></div>
+    </section>
+    <footer class="main-footer">LOCAL ORCHESTRATOR <span>Małe zadania. Widoczne postępy.</span></footer>
+  </main>
+
+  <dialog id="project-dialog" aria-labelledby="project-dialog-title">
+    <form id="project-form"><div class="dialog-heading"><div><p class="eyebrow">NOWY PROJEKT</p><h2 id="project-dialog-title">Połącz repozytorium</h2></div><button class="icon-button" type="button" data-close="project-dialog" aria-label="Zamknij">×</button></div>
+      <label>Nazwa projektu<input name="name" required maxlength="100" placeholder="np. Moja aplikacja"></label>
+      <label>Adres repozytorium Git<input name="remote_url" maxlength="1000" placeholder="git@git.comfortel.pl:zespol/projekt.git"></label>
+      <label>Gałąź źródłowa<input name="branch" value="main" maxlength="200"></label><p class="field-hint">Dostęp do repozytorium jest sprawdzany z serwera aplikacji. Klucz SSH lub poświadczenia HTTPS konfiguruje administrator.</p>
+      <details><summary>Alternatywnie: istniejące repozytorium na serwerze</summary><label>Ścieżka na serwerze<input name="path" maxlength="1000" placeholder="/srv/comfortel/projekty/aplikacja"></label><p class="field-hint">Wypełnij adres Git albo ścieżkę, nie oba pola. Kopiowane są tylko zapisane commity.</p></details>
+      <label>Instrukcje dla agenta <span class="muted">opcjonalnie</span><textarea name="instructions" rows="4" maxlength="12000" placeholder="Jak uruchomić testy? Jakie zasady obowiązują w projekcie?"></textarea></label>
+      <p class="form-error" role="alert" hidden></p><div class="dialog-footer"><button type="button" class="secondary" data-close="project-dialog">Anuluj</button><button class="primary" type="submit">Dodaj projekt</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="task-dialog" aria-labelledby="task-dialog-title">
+    <form id="task-form"><div class="dialog-heading"><div><p class="eyebrow">NOWE ZADANIE</p><h2 id="task-dialog-title">Co chcesz zrobić?</h2></div><button class="icon-button" type="button" data-close="task-dialog" aria-label="Zamknij">×</button></div>
+      <label>Projekt<select name="project_id" id="task-project" required></select></label>
+      <div class="jira-import"><label>Zadanie Jira <span class="muted">opcjonalnie</span><div class="jira-row"><input id="jira-key" placeholder="TI-123" maxlength="80"><button type="button" class="secondary" id="import-jira">Pobierz opis</button></div></label><p class="field-hint" id="jira-hint">Pobierz opis, a następnie sprawdź projekt i zakres pracy.</p></div>
+      <label>Tytuł<input name="title" required maxlength="160" placeholder="np. Przeanalizuj obsługę logowania"></label>
+      <label>Opis zadania<textarea name="prompt" required rows="5" maxlength="24000" placeholder="Opisz oczekiwany wynik i kryteria ukończenia…"></textarea></label>
+      <div class="form-row"><label>Agent<select name="provider" id="task-provider"><option value="claude">Claude Code</option><option value="codex">Codex</option></select></label><label>Rodzaj pracy<select name="kind" id="task-kind"><option value="analysis">Analiza kodu</option><option value="code">Zmiany w kodzie</option></select></label></div>
+      <p class="field-hint" id="mode-hint">Agent przeanalizuje osobną kopię repozytorium bez edytowania plików.</p>
+      <details><summary>Ustawienia zadania</summary><div class="form-row"><label>Model <span class="muted">opcjonalnie</span><input name="model" maxlength="120" placeholder="Domyślny model CLI"></label><label>Limit pracy agenta (min)<input name="timeout_minutes" type="number" min="1" max="120" value="20" required></label></div></details>
+      <p class="form-error" role="alert" hidden></p><div class="dialog-footer"><button type="button" class="secondary" data-close="task-dialog">Anuluj</button><button class="primary" type="submit">Uruchom zadanie →</button></div>
+    </form>
+  </dialog>
+  <div id="toast" role="status" class="toast" hidden></div>
+</body>
+</html>

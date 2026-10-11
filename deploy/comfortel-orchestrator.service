@@ -1,0 +1,27 @@
+[Unit]
+Description=Comfortel Orchestrator
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=comfortel-orchestrator
+Group=comfortel-orchestrator
+WorkingDirectory=/opt/comfortel-orchestrator
+Environment=HOME=/var/lib/comfortel-orchestrator
+Environment=LOCAL_ORCHESTRATOR_DATA=/var/lib/comfortel-orchestrator/data
+Environment=PATH=/var/lib/comfortel-orchestrator/.local/bin:/usr/local/bin:/usr/bin:/bin
+EnvironmentFile=/etc/comfortel-orchestrator.env
+ExecStart=/opt/comfortel-orchestrator/.venv/bin/python /opt/comfortel-orchestrator/run.py --host 127.0.0.1 --port 8787
+Restart=on-failure
+RestartSec=5
+KillMode=control-group
+TimeoutStopSec=35
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/comfortel-orchestrator
+
+[Install]
+WantedBy=multi-user.target
